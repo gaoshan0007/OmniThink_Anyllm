@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# 日志和本地数据
+*.log
+*.sqlite
+*.db
+
+# 本地生成的结果目录
+results/
+
+# 模型缓存目录（可根据需要调整）
+# models/
+
+# 测试相关
+.coverage
+htmlcov/
+.pytest_cache/
