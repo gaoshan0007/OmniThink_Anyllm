@@ -85,9 +85,9 @@ class MindPoint():
     
     def extend(self):
         extend_concept = dspy.Predict(ExtendConcept)
-        with dspy.settings.context(lm=self.lm):
+        with dspy.settings.context(lm=self.gen_concept_lm):
             info='\n'.join([str(i) for i in self.info])
-            keywords = extend_concept(info='\n'.join([str(i) for i in self.info]), concept=self.concept, category = self.category).keywords
+            keywords = extend_concept(info=info, concept=self.concept, category=self.category).keywords
         categories = {}
         current_category = None
         for line in keywords.split('\n'):
@@ -137,7 +137,7 @@ class MindMap():
             if count == self.depth - 1:  # Check if it's the last layer
                 break
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                 futures = {executor.submit(node.extend): node for node in current_level}
                 
                 for future in concurrent.futures.as_completed(futures):
@@ -145,7 +145,6 @@ class MindMap():
                     # Assuming extend populates children.
                     next_level.extend(node.children.values())
             
-            yield current_level
             current_level = next_level
     
     def recursive_extend(self, node: MindPoint, count: int):
@@ -225,7 +224,7 @@ class MindMap():
         Prepare collected snippets and URLs for retrieval by encoding the snippets using paraphrase-MiniLM-L6-v2.
         collected_urls and collected_snippets have corresponding indices.
         """
-        self.encoder = SentenceTransformer('/mnt/8t/xzk/models/paraphrase-MiniLM-L6-v2')
+        self.encoder = SentenceTransformer('paraphrase-MiniLM-L6-v2', cache_folder='models')
         self.collected_urls = []
         self.collected_snippets = []
         seen_urls = set()

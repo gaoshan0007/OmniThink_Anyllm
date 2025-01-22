@@ -11,16 +11,17 @@ from src.actions.article_polish import ArticlePolishingModule
 
 def main(args):
     kwargs = {
-        'api_key': os.getenv("OPENAI_API_KEY"),
+        'api_key': args.api_key or os.getenv("OPENAI_API_KEY"),
         'temperature': 1.0,
         'top_p': 0.9,
+        'base_url': args.base_url or os.getenv('DASHSCOPE_BASE_URL'),
     }
     if args.retriever == 'google':
         rm = GoogleSearchAli(k=args.retrievernum)
 
     lm = OpenAIModel_dashscope(model=args.llm, max_tokens=2000, **kwargs)
 
-    topic = input('Topic: ')
+    topic = '美国历史上有多少位总统？' #input('Topic: ')
     file_name = topic.replace(' ', '_')
     mind_map = MindMap(
         retriever=rm,
@@ -75,13 +76,20 @@ if __name__ == '__main__':
                         help='Maximum number of threads to use. The information seeking part and the article generation'
                              'part can speed up by using multiple threads. Consider reducing it if keep getting '
                              '"Exceed rate limit" error when calling LM API.')
-    parser.add_argument('--retriever', type=str,
+    parser.add_argument('--retriever', type=str, default='google',
                         help='The search engine API to use for retrieving information.')
     parser.add_argument('--retrievernum', type=int, default=5,
                         help='The search engine API to use for retrieving information.')
        
-    parser.add_argument('--llm', type=str,
+    parser.add_argument('--llm', type=str, default='',
                         help='The language model API to use for generating content.')
+    
+    parser.add_argument('--api_key', type=str, default='',
+                        help='Api Key for LLM API endpoint')
+    
+    parser.add_argument('--base_url', type=str, default='',
+                        help='Base URL for LLM API endpoint')
+    
     parser.add_argument('--depth', type=int, default=2,
                         help='The depth of knowledge seeking.')
 

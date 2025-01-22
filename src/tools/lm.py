@@ -18,10 +18,12 @@ class OpenAIModel_dashscope(dspy.OpenAI):
             model: str = "qwen-max-allinone",
             max_tokens: int = 2000,
             api_key: Optional[str] = None,
+            base_url: Optional[str] = "https://dashscope.aliyuncs.com/compatible-mode/v1",
             **kwargs
     ):
         super().__init__(model=model, api_key=api_key, **kwargs)
         self.model = model
+        self.base_url = base_url
         self._token_usage_lock = threading.Lock()
         self.max_tokens = max_tokens
         self.prompt_tokens = 0
@@ -58,7 +60,7 @@ class OpenAIModel_dashscope(dspy.OpenAI):
         assert only_completed, "for now"
         assert return_sorted is False, "for now"
 
-        CALL_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+        CALL_URL = f"{self.base_url}/chat/completions"
         DASHSCOPE_KEY = os.getenv('DASHSCOPE_KEY')
         HEADERS = {
             'Content-Type': 'application/json',
@@ -72,7 +74,7 @@ class OpenAIModel_dashscope(dspy.OpenAI):
             stream=False,
         )
         import requests
-        max_try = 3
+        max_try = 1
         for i in range(max_try):
             try:
                 ret = requests.post(CALL_URL, json=kwargs,
@@ -99,11 +101,15 @@ class QwenModel(dspy.OpenAI):
             self,
             model: str = "qwen-max-allinone",
             api_key: Optional[str] = None,
+            base_url: Optional[str] = "https://dashscope.aliyuncs.com/api/v1",
             **kwargs
     ):
         super().__init__(model=model, api_key=api_key, **kwargs)
         self.model = model
         self.api_key = api_key
+        from dashscope import Generation
+        Generation.api_key = api_key
+        Generation.base_url = base_url
         self._token_usage_lock = threading.Lock()
         self.prompt_tokens = 0
         self.completion_tokens = 0
