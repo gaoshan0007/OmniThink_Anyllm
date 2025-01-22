@@ -18,38 +18,29 @@ def clean_text(res):
     return result
 
 class GoogleSearchAli(dspy.Retrieve):
-    def __init__(self, bing_search_api_key=None, k=3, is_valid_source: Callable = None,
+    def __init__(self, google_api_key=None, search_engine_id=None, k=3, is_valid_source: Callable = None,
                  min_char_count: int = 150, snippet_chunk_size: int = 1000, webpage_helper_max_threads=10,
-                 mkt='en-US', language='en-US', **kwargs):
+                 **kwargs):
+        """Google Custom Search API封装
+        Args:
+            google_api_key (str): API密钥，可通过环境变量GOOGLE_API_KEY设置
+            search_engine_id (str): 搜索引擎ID，可通过环境变量SEARCH_ENGINE_ID设置，默认使用预配置ID
+            k (int): 返回结果数量
+            is_valid_source (Callable): 结果过滤函数
+            min_char_count (int): 网页内容最小字符数
+            snippet_chunk_size (int): 文本片段大小
+            webpage_helper_max_threads (int): 网页抓取最大线程数
+        """
 
         super().__init__(k=k)
-        key = os.environ.get('SEARCHKEY', 'default_value')
-        self.header = {
-            "Content-Type": "application/json",
-            "Accept-Encoding": "utf-8",
-            "Authorization": f"Bearer lm-/{key}== ",
-        }
-# 
-        self.template = {
-            "rid": str(uuid.uuid4()),
-            "scene": "dolphin_search_bing_nlp",
-            "uq": "",
-            "debug": True,
-            "fields": [],
-            "page": 1,
-            "rows": 10,
-            "customConfigInfo": {
-                "multiSearch": False,
-                "qpMultiQuery": False,
-                "qpMultiQueryHistory": [],
-                "qpSpellcheck": False,
-                "qpEmbedding": False,
-                "knnWithScript": False,
-                "qpTermsWeight": False,
-                "pluginServiceConfig": {"qp": "mvp_search_qp_qwen"},  # v3 rewrite
-            },
-            "headers": {"__d_head_qto": 5000},
-        }
+        # 统一参数获取逻辑：显式参数 > 环境变量 > 默认值
+        self.google_api_key = google_api_key or os.environ.get("GOOGLE_API_KEY")
+        self.search_engine_id = search_engine_id or os.environ.get("SEARCH_ENGINE_ID")
+        
+        if not self.google_api_key:
+            raise RuntimeError("GOOGLE_API_KEY must be provided via parameter or environment variable")
+        if not self.search_engine_id:
+            raise RuntimeError("SEARCH_ENGINE_ID must be provided via parameter, environment variable or use default")
         
         self.webpage_helper = WebPageHelper(
             min_char_count=min_char_count,
@@ -68,7 +59,7 @@ class GoogleSearchAli(dspy.Retrieve):
         usage = self.usage
         self.usage = 0
 
-        return {'BingSearch': usage}
+        return {'GoogleSearch': usage}
 
     def forward(self, query_or_queries: Union[str, List[str]], exclude_urls: List[str] = []):
 
@@ -83,21 +74,29 @@ class GoogleSearchAli(dspy.Retrieve):
 
         for query in queries:
             try:
-                self.template["uq"] = query
-
-                response = requests.post(
-                    "http://101.37.167.147/gw/v1/api/msearch-sp/qwen-search",
-                    data=json.dumps(self.template),
-                    headers=self.header,
-                )              
-                response = json.loads(response.text)
-                search_results = response['data']['docs']
-                for result in search_results:
-                    url_to_results[result['url']] = {
-                        'url': result['url'],
-                        'title': result['title'],
-                        'description': result.get('snippet', '')
-                    }
+                # 调用Google Custom Search API
+                params = {
+                    'q': query,
+                    'key': self.google_api_key,
+                    'cx': self.search_engine_id,
+                    'num': 10
+                }
+                response = requests.get(
+                    "https://www.googleapis.com/customsearch/v1",
+                    params=params
+                )
+                
+                if response.status_code == 200:
+                    results = response.json()
+                    search_results = results.get('items', [])
+                    for item in search_results:
+                        url_to_results[item['link']] = {
+                            'url': item['link'],
+                            'title': item['title'],
+                            'description': item.get('snippet', '')
+                        }
+                else:
+                    logging.error(f'Google API Error: {response.status_code}')
             except Exception as e:
                 logging.error(f'Error occurs when searching query {query}: {e}')
 
@@ -108,7 +107,7 @@ class GoogleSearchAli(dspy.Retrieve):
             r['snippets'] = valid_url_to_snippets[url]['snippets']
             collected_results.append(r)
 
-        print(f'lengt of collected_results :{len(collected_results)}')
+        print(f'Google search results count: {len(collected_results)}')
         return collected_results
     
 
@@ -318,4 +317,3 @@ class BingSearch(dspy.Retrieve):
             r['snippets'] = valid_url_to_snippets[url]['snippets']
             collected_results.append(r)
         return collected_results
-
