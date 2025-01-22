@@ -225,7 +225,7 @@ class MindMap():
         Prepare collected snippets and URLs for retrieval by encoding the snippets using paraphrase-MiniLM-L6-v2.
         collected_urls and collected_snippets have corresponding indices.
         """
-        self.encoder = SentenceTransformer('/mnt/8t/xzk/models/paraphrase-MiniLM-L6-v2')
+        self.encoder = SentenceTransformer('paraphrase-MiniLM-L6-v2',cache_folder='models')
         self.collected_urls = []
         self.collected_snippets = []
         seen_urls = set()
