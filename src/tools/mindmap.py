@@ -137,7 +137,7 @@ class MindMap():
             if count == self.depth - 1:  # Check if it's the last layer
                 break
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 futures = {executor.submit(node.extend): node for node in current_level}
                 
                 for future in concurrent.futures.as_completed(futures):
